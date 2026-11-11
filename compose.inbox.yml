@@ -1,0 +1,13 @@
+services:
+  web:
+    environment:
+      INBOX_MONITOR_ORIGIN: http://inbox-monitor:8787
+      INBOX_MONITOR_WORKSPACE_ID: ${INBOX_MONITOR_WORKSPACE_ID:?Set inbox workspace}
+      INBOX_MONITOR_ACCOUNT_ID: ${INBOX_MONITOR_ACCOUNT_ID:?Set inbox account}
+      INBOX_MONITOR_IDENTITY_HASH: ${INBOX_MONITOR_IDENTITY_HASH:?Set confirmed inbox identity}
+    networks:
+      - inbox
+networks:
+  inbox:
+    external: true
+    name: autotool_inbox_bridge

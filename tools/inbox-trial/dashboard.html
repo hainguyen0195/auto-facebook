@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Minh Phan - Thử nhận tin</title>
+    <style>
+      :root {
+        --ink: #173735;
+        --muted: #607875;
+        --paper: #f5f6ed;
+        --line: #d5dfd6;
+        --green: #166351;
+        --orange: #a44a16;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(ellipse at top right, #dcece3, transparent 65%),
+          var(--paper);
+        font:
+          16px/1.6 Georgia,
+          serif;
+      }
+      main {
+        max-width: 1000px;
+        margin: auto;
+        padding: 38px 22px;
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 22px;
+      }
+      small,
+      .meta {
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 32px;
+        line-height: 1.2;
+        margin: 10px 0;
+      }
+      h2 {
+        font-size: 22px;
+        margin-top: 30px;
+      }
+      .badge {
+        display: inline-block;
+        background: #e0e9db;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font: 13px/1.6 sans-serif;
+      }
+      a {
+        color: var(--green);
+      }
+      .status {
+        padding: 20px 0;
+      }
+      .status strong {
+        font-size: 20px;
+      }
+      .note {
+        border-left: 3px solid var(--orange);
+        padding: 8px 16px;
+        background: #fff7e6;
+      }
+      .cards {
+        display: grid;
+        gap: 12px;
+      }
+      .card {
+        background: #ffffffb0;
+        border: 1px solid var(--line);
+        padding: 18px;
+        border-radius: 12px;
+      }
+      .top {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .preview {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 8px 0;
+      }
+      .meta {
+        font: 13px/1.6 sans-serif;
+      }
+      .error {
+        color: var(--orange);
+      }
+      #events {
+        font: 14px/1.8 sans-serif;
+        padding-left: 20px;
+      }
+      button {
+        border: 1px solid var(--line);
+        background: white;
+        padding: 8px 14px;
+        color: var(--green);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 22px 16px;
+        }
+        h1 {
+          font-size: 27px;
+        }
+      }
+    </style>
+    <script src="/dashboard.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="badge">BẢN THỬ · CHỈ XEM TRƯỚC</span>
+        <h1 id="account">Đang tải tài khoản…</h1>
+        <p>Nhận diện hội thoại trên VPS, độc lập máy đăng Windows.</p>
+        <a
+          href="http://127.0.0.1:16080/vnc.html?autoconnect=true&amp;resize=scale"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Mở cửa sổ Facebook trên VPS →</a
+        >
+      </header>
+      <section class="status" aria-live="polite">
+        <strong id="status">Đang kết nối…</strong>
+        <p id="reason"></p>
+        <div class="meta" id="updated"></div>
+      </section>
+      <p class="note">
+        Chỉ ghi nhận phần danh sách nhìn thấy, không phải tổng hộp thư. Dấu
+        “chưa xác định” không có nghĩa là đã đọc. Không bấm vào hội thoại trong
+        cửa sổ VPS; bạn trả lời bằng Messenger trên điện thoại.
+      </p>
+      <h2 id="count">Hội thoại phát hiện được</h2>
+      <div id="conversations" class="cards"></div>
+      <h2>Lịch sử phát hiện trong 24 giờ</h2>
+      <p class="meta">
+        Lần đầu chỉ lấy dữ liệu nền. “Đoạn tin thay đổi” không xác nhận số lượng
+        tin nhắn; tin trùng nội dung có thể chưa phân biệt được.
+      </p>
+      <ul id="events"></ul>
+      <p class="meta">
+        Dữ liệu thử được giữ tối đa 24 giờ kể từ lần quan sát tương ứng. Trang
+        tự cập nhật mỗi 5 giây; bộ theo dõi đọc danh sách mỗi 30 giây.
+      </p>
+    </main>
+  </body>
+</html>

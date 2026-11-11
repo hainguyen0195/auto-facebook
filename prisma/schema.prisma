@@ -1,0 +1,509 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String     @id
+  name          String
+  email         String     @unique
+  emailVerified Boolean    @default(false)
+  image         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  workspace     Workspace?
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushSubscriptions MobilePushSubscription[]
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
+}
+
+enum AccountStatus {
+  ACTIVE
+  PAUSED
+  RESTRICTED
+}
+
+enum TaskStatus {
+  SCHEDULED
+  READY
+  IN_PROGRESS
+  PENDING_REVIEW
+  PUBLISHED
+  BLOCKED
+  SKIPPED
+  CANCELLED
+}
+
+model Workspace {
+  id                  String               @id @default(cuid())
+  name                String
+  ownerId             String               @unique
+  owner               User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  timezone            String               @default("Asia/Bangkok")
+  createdAt           DateTime             @default(now())
+  accounts            FacebookAccount[]
+  groups              Group[]
+  posts               Post[]
+  assets              Asset[]
+  campaigns           Campaign[]
+  tasks               Task[]
+  notifications       Notification[]
+  desktopDevices      DesktopDevice[]
+  desktopPairings     DesktopPairing[]
+  facebookConnections FacebookConnection[]
+  desktopCommands     DesktopCommand[]
+  interactions        Interaction[]
+  autoInteraction     AutoInteractionSetting?
+  pushSubscriptions   MobilePushSubscription[]
+}
+
+model MobilePushSubscription {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessionId        String
+  session          Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  endpointHash     String    @unique
+  endpoint         String
+  p256dh           String
+  auth             String
+  vapidPublicKey   String
+  pendingVersion   Int       @default(0)
+  deliveredVersion Int       @default(0)
+  hasNew           Boolean   @default(false)
+  testRequested    Boolean   @default(false)
+  lastTestAt       DateTime?
+  nextAttemptAt    DateTime  @default(now())
+  leaseUntil       DateTime?
+  attempts         Int       @default(0)
+  lastSentAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([sessionId])
+  @@index([nextAttemptAt])
+}
+
+model FacebookAccount {
+  id           String              @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  url          String
+  profileName  String
+  color        String              @default("teal")
+  status       AccountStatus       @default(ACTIVE)
+  dailyLimit   Int                 @default(10)
+  postIntervalMinutes Float        @default(5)
+  quietHoursEnabled Boolean        @default(true)
+  quietStart   Int                 @default(22)
+  quietEnd     Int                 @default(7)
+  note         String              @default("")
+  archivedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  memberships  Membership[]
+  tasks        Task[]
+  connection   FacebookConnection?
+  interactions Interaction[]
+  deviceSessions FacebookDeviceSession[]
+  inboxSnapshot FacebookInboxSnapshot?
+
+  @@index([workspaceId, archivedAt])
+}
+
+model Group {
+  id               String       @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  url              String
+  tags             String[]     @default([])
+  rules            String       @default("")
+  minIntervalMinutes Int          @default(5)
+  archivedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  memberships      Membership[]
+  tasks            Task[]
+
+  @@unique([workspaceId, url])
+  @@index([workspaceId, archivedAt])
+}
+
+model Membership {
+  accountId String
+  groupId   String
+  account   FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, groupId])
+}
+
+model Post {
+  id          String      @id @default(cuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  tags        String[]    @default([])
+  version     Int         @default(1)
+  archivedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  assets      PostAsset[]
+  campaigns   Campaign[]
+  tasks       Task[]
+
+  @@index([workspaceId, archivedAt, updatedAt])
+}
+
+model Asset {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  storageKey   String      @unique
+  originalName String
+  mime         String
+  size         Int
+  createdAt    DateTime    @default(now())
+  posts        PostAsset[]
+
+  @@index([workspaceId])
+}
+
+model PostAsset {
+  postId   String
+  assetId  String
+  position Int
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  asset    Asset  @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@id([postId, assetId])
+}
+
+model Campaign {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId         String
+  post           Post      @relation(fields: [postId], references: [id])
+  idempotencyKey String
+  requestHash    String
+  createdAt      DateTime  @default(now())
+  tasks          Task[]
+
+  @@unique([workspaceId, idempotencyKey])
+}
+
+model Task {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaignId      String
+  campaign        Campaign        @relation(fields: [campaignId], references: [id])
+  postId          String
+  post            Post            @relation(fields: [postId], references: [id])
+  accountId       String
+  account         FacebookAccount @relation(fields: [accountId], references: [id])
+  groupId         String?
+  group           Group?          @relation(fields: [groupId], references: [id])
+  destinationKey  String
+  titleSnapshot   String
+  contentSnapshot String
+  contentHash     String
+  assetIds        String[]        @default([])
+  scheduledAt     DateTime
+  status          TaskStatus      @default(SCHEDULED)
+  blockReason     String?
+  note            String          @default("")
+  resultUrl       String?
+  recordedAt      DateTime?
+  executionMode   String          @default("MANUAL")
+  resultSource    String          @default("USER")
+  desktopDeviceId String?
+  desktopRunId    String?
+  desktopLeaseAt  DateTime?
+  automaticPhase  String          @default("NONE")
+  automaticAttempts Int           @default(0)
+  nextAttemptAt   DateTime?
+  archivedAt      DateTime?
+  startedAt       DateTime?
+  version         Int             @default(1)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  events          TaskEvent[]
+  notification    Notification?
+  sourceInteractions Interaction[]
+
+  @@unique([campaignId, accountId, destinationKey])
+  @@index([workspaceId, status, scheduledAt])
+  @@index([workspaceId, status, recordedAt])
+  @@index([workspaceId, archivedAt, scheduledAt])
+  @@index([workspaceId, contentHash])
+  @@index([accountId, scheduledAt])
+  @@index([executionMode, status, scheduledAt])
+  @@index([executionMode, status, nextAttemptAt])
+}
+
+model DesktopPairing {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  codeHash    String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model DesktopDevice {
+  id          String               @id @default(cuid())
+  workspaceId String
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  tokenHash   String               @unique
+  paused      Boolean              @default(false)
+  lastSeenAt  DateTime?
+  instanceId  String?
+  supportsInbox Boolean             @default(false)
+  revokedAt   DateTime?
+  createdAt   DateTime             @default(now())
+  connections FacebookConnection[]
+  commands    DesktopCommand[]
+  sessions    FacebookDeviceSession[]
+
+  @@index([workspaceId])
+}
+
+model FacebookConnection {
+  id                    String          @id @default(cuid())
+  workspaceId           String
+  workspace             Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accountId             String          @unique
+  account               FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  deviceId              String
+  device                DesktopDevice   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  state                 String          @default("LOGIN_REQUIRED")
+  identityHash          String?
+  confirmedIdentityHash String?
+  expectedIdentityHash  String?
+  generation            Int             @default(0)
+  automationEnabled     Boolean         @default(false)
+  interactionEnabled    Boolean         @default(false)
+  inboxPaused           Boolean         @default(false)
+  interactionDailyLimit Int             @default(10)
+  interactionIntervalMinutes Int        @default(5)
+  checkedAt             DateTime?
+  message               String          @default("")
+  updatedAt             DateTime        @updatedAt
+
+  @@index([workspaceId, deviceId])
+}
+
+model DesktopCommand {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deviceId    String
+  device      DesktopDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  accountId   String
+  kind        String
+  targetUrl   String?
+  state       String        @default("QUEUED")
+  runId       String?
+  generation  Int           @default(0)
+  createdAt   DateTime      @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  message     String        @default("")
+
+  @@index([deviceId, state, createdAt])
+}
+
+model FacebookDeviceSession {
+  accountId String
+  account FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  deviceId String
+  device DesktopDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  state String
+  confirmedIdentityHash String?
+  automationEnabled Boolean @default(false)
+  interactionEnabled Boolean @default(false)
+  interactionDailyLimit Int @default(10)
+  interactionIntervalMinutes Int @default(5)
+  checkedAt DateTime?
+  @@id([accountId, deviceId])
+}
+
+model FacebookInboxSnapshot {
+  accountId String @id
+  account FacebookAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  deviceId String
+  generation Int
+  identityHash String
+  state Json
+  updatedAt DateTime @updatedAt
+}
+
+model AutoInteractionSetting {
+  workspaceId String @id
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  enabled Boolean @default(false)
+  mode String @default("COMBINED")
+  content String @default("Up")
+  reactions String[] @default(["LIKE", "LOVE", "HAHA"])
+  startsAt DateTime?
+  backfillDays DateTime[] @default([])
+  gapMinutes Int @default(5)
+  lastActorId String?
+  lastComment String?
+  version Int @default(1)
+  updatedAt DateTime @updatedAt
+}
+
+model Interaction {
+  id          String          @id @default(cuid())
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     FacebookAccount @relation(fields: [accountId], references: [id])
+  sourceTaskId String?
+  sourceTask  Task?           @relation(fields: [sourceTaskId], references: [id], onDelete: SetNull)
+  executionMode String        @default("MANUAL")
+  postUrl     String
+  postKey     String
+  kind        String
+  content     String          @default("")
+  reaction    String?
+  autoGenerated Boolean @default(false)
+  skipReason String?
+  unavailableAt DateTime?
+  archivedAt DateTime?
+  reactionState String @default("NONE")
+  commentState String @default("NONE")
+  scheduledAt DateTime
+  status      String          @default("PLANNED")
+  note        String          @default("")
+  phase       String          @default("NONE")
+  desktopDeviceId String?
+  runId       String?
+  leaseAt     DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  attempts    Int             @default(0)
+  nextAttemptAt DateTime?
+  resultSource String         @default("USER")
+  version     Int             @default(1)
+  events      InteractionEvent[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([workspaceId, postKey])
+  @@index([workspaceId, status, scheduledAt])
+  @@index([workspaceId, archivedAt, scheduledAt])
+  @@index([workspaceId, autoGenerated, status])
+  @@index([workspaceId, skipReason, unavailableAt])
+  @@index([workspaceId, executionMode, startedAt])
+  @@index([sourceTaskId, status])
+  @@index([desktopDeviceId, status])
+}
+
+model InteractionEvent {
+  id String @id @default(cuid())
+  interactionId String
+  interaction Interaction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  runId String?
+  fromStatus String
+  toStatus String
+  note String
+  createdAt DateTime @default(now())
+  @@index([interactionId, createdAt])
+}
+
+model TaskEvent {
+  id          String     @id
+  taskId      String
+  task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestHash String
+  fromStatus  TaskStatus
+  toStatus    TaskStatus
+  source      String     @default("USER")
+  note        String     @default("")
+  createdAt   DateTime   @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskId      String    @unique
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId, readAt])
+}

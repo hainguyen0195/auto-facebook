@@ -1,0 +1,48 @@
+name: autotool-inbox-trial
+services:
+  monitor:
+    image: autotool-inbox-trial:20261105
+    build:
+      context: ../..
+      dockerfile: tools/inbox-trial/Dockerfile
+    restart: unless-stopped
+    init: true
+    cpus: 1.0
+    mem_limit: 2g
+    pids_limit: 256
+    shm_size: 256m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      default:
+      inbox:
+        aliases: [inbox-monitor]
+    tmpfs:
+      - /tmp:size=536870912,mode=1777
+    ports:
+      - "127.0.0.1:16080:6080"
+      - "127.0.0.1:18787:8787"
+    volumes:
+      - ../../.data/inbox-trial:/data
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "2"
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+networks:
+  inbox:
+    external: true
+    name: autotool_inbox_bridge

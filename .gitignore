@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+!.env.vps.example
+.data/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+public/downloads/desktop-windows*.zip
+public/downloads/desktop-windows.json
+public/downloads/desktop-macos*.zip
+public/downloads/desktop-macos.json

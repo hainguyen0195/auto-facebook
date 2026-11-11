@@ -1,0 +1,27 @@
+name: autotool
+services:
+  migrate:
+    image: ${APP_IMAGE:-autotool:local}
+  web:
+    image: ${APP_IMAGE:-autotool:local}
+    ports: !reset []
+    networks:
+      - default
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:-proxy_net}
+      traefik.http.routers.autotool-web.rule: Host(`${APP_DOMAIN:?Set APP_DOMAIN}`)
+      traefik.http.routers.autotool-web.entrypoints: websecure
+      traefik.http.routers.autotool-web.tls: "true"
+      traefik.http.routers.autotool-web.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      traefik.http.routers.autotool-web.service: autotool-web
+      traefik.http.routers.autotool-web.middlewares: autotool-security
+      traefik.http.services.autotool-web.loadbalancer.server.port: "3000"
+      traefik.http.middlewares.autotool-security.headers.stsseconds: "31536000"
+  worker:
+    image: ${APP_IMAGE:-autotool:local}
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy_net}
